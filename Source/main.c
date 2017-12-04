@@ -1,11 +1,12 @@
 /**
   ******************************************************************************
-  * @file    SysTick_Example/main.c
+  * @file    IWDG_Example/main.c
   * @author  MCD Application Team
   * @version V1.0.1
   * @date    11-November-2013
-  * @brief   This example shows how to configure the SysTick to generate a time 
-  *          base equal to 1 ms. the SysTick is clocked by the AHB clock(HCLK).
+  * @brief   This example shows how to update at regular period the IWDG reload
+  *          counter and how to simulate a software fault generating an MCU 
+  *          WDG reset on expiry of a programmed time period.
   ******************************************************************************
   * @attention
   *
@@ -32,24 +33,28 @@
   * @{
   */
 
-/** @addtogroup SysTick_Example
+/** @addtogroup IWDG_Example
   * @{
-  */ 
+  */
 
 /* Private typedef -----------------------------------------------------------*/
-/* Private define ------------------------------------------------------------*/
+EXTI_InitTypeDef   EXTI_InitStructure;
+/* Private define ------------------------------------------------------------*/ 
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
-GPIO_InitTypeDef GPIO_InitStructure;
-static __IO uint32_t TimingDelay;
+static __IO uint32_t uwLsiFreq = 0;
+
+__IO uint32_t uwTimingDelay = 0;
+__IO uint32_t uwCaptureNumber = 0;
+__IO uint32_t uwPeriodValue = 0;
 
 /* Private function prototypes -----------------------------------------------*/
-static void Delay(__IO uint32_t nTime);   
-
+void Delay(__IO uint32_t nTime);
+static uint32_t GetLSIFrequency(void);
 /* Private functions ---------------------------------------------------------*/
 
 /**
-  * @brief   Main program
+  * @brief  Main program
   * @param  None
   * @retval None
   */
@@ -60,60 +65,156 @@ int main(void)
        files (startup_stm32f429_439xx.s) before to branch to application main. 
        To reconfigure the default setting of SystemInit() function, refer to
        system_stm32f4xx.c file
-     */       
+     */     
        
-  /* Initialize LEDs available on STM32F429I-DISCO */
+  /* Initialize LED3, LED4 and USER Button mounted on STM32F429I-DISCO*/       
   STM_EVAL_LEDInit(LED3);
   STM_EVAL_LEDInit(LED4);
+  STM_EVAL_PBInit(BUTTON_USER, BUTTON_MODE_EXTI);
 
-  /* Turn on LED3 */
-  STM_EVAL_LEDOn(LED3);
-
-  /* Setup SysTick Timer for 1 msec interrupts.
-     ------------------------------------------
-    1. The SysTick_Config() function is a CMSIS function which configure:
-       - The SysTick Reload register with value passed as function parameter.
-       - Configure the SysTick IRQ priority to the lowest value (0x0F).
-       - Reset the SysTick Counter register.
-       - Configure the SysTick Counter clock source to be Core Clock Source (HCLK).
-       - Enable the SysTick Interrupt.
-       - Start the SysTick Counter.
-    
-    2. You can change the SysTick Clock source to be HCLK_Div8 by calling the
-       SysTick_CLKSourceConfig(SysTick_CLKSource_HCLK_Div8) just after the
-       SysTick_Config() function call. The SysTick_CLKSourceConfig() is defined
-       inside the misc.c file.
-
-    3. You can change the SysTick IRQ priority by calling the
-       NVIC_SetPriority(SysTick_IRQn,...) just after the SysTick_Config() function 
-       call. The NVIC_SetPriority() is defined inside the core_cm3.h file.
-
-    4. To adjust the SysTick time base, use the following formula:
-                            
-         Reload Value = SysTick Counter Clock (Hz) x  Desired Time base (s)
-    
-       - Reload Value is the parameter to be passed for SysTick_Config() function
-       - Reload Value should not exceed 0xFFFFFF
-   */
+  /* Setup SysTick Timer for 1 msec interrupts  */
   if (SysTick_Config(SystemCoreClock / 1000))
   { 
     /* Capture error */ 
     while (1);
   }
 
+  /* Check if the system has resumed from IWDG reset */
+  if (RCC_GetFlagStatus(RCC_FLAG_IWDGRST) != RESET)
+  {
+    /* IWDGRST flag set */
+    /* Turn on LED3 */
+    STM_EVAL_LEDOn(LED3);
+
+    /* Clear reset flags */
+    RCC_ClearFlag();
+  }
+  else
+  {
+    /* IWDGRST flag is not set */
+    /* Turn off LED3 */
+    STM_EVAL_LEDOff(LED3);
+  }
+ 
+  /* Get the LSI frequency:  TIM5 is used to measure the LSI frequency */
+  uwLsiFreq = GetLSIFrequency();
+   
+  /* IWDG timeout equal to 250 ms (the timeout may varies due to LSI frequency
+     dispersion) */
+  /* Enable write access to IWDG_PR and IWDG_RLR registers */
+  IWDG_WriteAccessCmd(IWDG_WriteAccess_Enable);
+
+  /* IWDG counter clock: LSI/32 */
+  IWDG_SetPrescaler(IWDG_Prescaler_32);
+
+  /* Set counter reload value to obtain 250ms IWDG TimeOut.
+     IWDG counter clock Frequency = LsiFreq/32
+     Counter Reload Value = 250ms/IWDG counter clock period
+                          = 0.25s / (32/LsiFreq)
+                          = LsiFreq/(32 * 4)
+                          = LsiFreq/128
+   */   
+  IWDG_SetReload(uwLsiFreq/128);
+
+  /* Reload IWDG counter */
+  IWDG_ReloadCounter();
+
+  /* Enable IWDG (the LSI oscillator will be enabled by hardware) */
+  IWDG_Enable();
+
   while (1)
   {
     /* Toggle LED4 */
     STM_EVAL_LEDToggle(LED4);
+    
+    /* Insert 240 ms delay */
+    Delay(240);
 
-    /* Insert 50 ms delay */
-    Delay(50);
+    /* Reload IWDG counter */
+    IWDG_ReloadCounter();  
+  }
+}
 
-    /* Toggle LED3 */
-    STM_EVAL_LEDToggle(LED3);
+/**
+  * @brief  Configures TIM5 to measure the LSI oscillator frequency. 
+  * @param  None
+  * @retval LSI Frequency
+  */
+static uint32_t GetLSIFrequency(void)
+{
+  NVIC_InitTypeDef   NVIC_InitStructure;
+  TIM_ICInitTypeDef  TIM_ICInitStructure;
+  RCC_ClocksTypeDef  RCC_ClockFreq;
 
-    /* Insert 100 ms delay */
-    Delay(100);
+  /* Enable the LSI oscillator ************************************************/
+  RCC_LSICmd(ENABLE);
+  
+  /* Wait till LSI is ready */
+  while (RCC_GetFlagStatus(RCC_FLAG_LSIRDY) == RESET)
+  {
+  }
+
+  /* TIM5 configuration *******************************************************/ 
+  /* Enable TIM5 clock */
+  RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM5, ENABLE);
+  
+  /* Connect internally the TIM5_CH4 Input Capture to the LSI clock output */
+  TIM_RemapConfig(TIM5, TIM5_LSI);
+
+  /* Configure TIM5 prescaler */
+  TIM_PrescalerConfig(TIM5, 0, TIM_PSCReloadMode_Immediate);
+  
+  /* TIM5 configuration: Input Capture mode ---------------------
+     The LSI oscillator is connected to TIM5 CH4
+     The Rising edge is used as active edge,
+     The TIM5 CCR4 is used to compute the frequency value 
+  ------------------------------------------------------------ */
+  TIM_ICInitStructure.TIM_Channel = TIM_Channel_4;
+  TIM_ICInitStructure.TIM_ICPolarity = TIM_ICPolarity_Rising;
+  TIM_ICInitStructure.TIM_ICSelection = TIM_ICSelection_DirectTI;
+  TIM_ICInitStructure.TIM_ICPrescaler = TIM_ICPSC_DIV8;
+  TIM_ICInitStructure.TIM_ICFilter = 0;
+  TIM_ICInit(TIM5, &TIM_ICInitStructure);
+  
+  /* Enable TIM5 Interrupt channel */
+  NVIC_InitStructure.NVIC_IRQChannel = TIM5_IRQn;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_Init(&NVIC_InitStructure);
+
+  /* Enable TIM5 counter */
+  TIM_Cmd(TIM5, ENABLE);
+
+  /* Reset the flags */
+  TIM5->SR = 0;
+    
+  /* Enable the CC4 Interrupt Request */  
+  TIM_ITConfig(TIM5, TIM_IT_CC4, ENABLE);
+
+
+  /* Wait until the TIM5 get 2 LSI edges (refer to TIM5_IRQHandler() in 
+    stm32f4xx_it.c file) ******************************************************/
+  while(uwCaptureNumber != 2)
+  {
+  }
+  /* Deinitialize the TIM5 peripheral registers to their default reset values */
+  TIM_DeInit(TIM5);
+
+
+  /* Compute the LSI frequency, depending on TIM5 input clock frequency (PCLK1)*/
+  /* Get SYSCLK, HCLK and PCLKx frequency */
+  RCC_GetClocksFreq(&RCC_ClockFreq);
+
+  /* Get PCLK1 prescaler */
+  if ((RCC->CFGR & RCC_CFGR_PPRE1) == 0)
+  { 
+    /* PCLK1 prescaler equal to 1 => TIMCLK = PCLK1 */
+    return ((RCC_ClockFreq.PCLK1_Frequency / uwPeriodValue) * 8);
+  }
+  else
+  { /* PCLK1 prescaler different from 1 => TIMCLK = 2 * PCLK1 */
+    return (((2 * RCC_ClockFreq.PCLK1_Frequency) / uwPeriodValue) * 8) ;
   }
 }
 
@@ -124,22 +225,9 @@ int main(void)
   */
 void Delay(__IO uint32_t nTime)
 { 
-  TimingDelay = nTime;
+  uwTimingDelay = nTime;
 
-  while(TimingDelay != 0);
-}
-
-/**
-  * @brief  Decrements the TimingDelay variable.
-  * @param  None
-  * @retval None
-  */
-void TimingDelay_Decrement(void)
-{
-  if (TimingDelay != 0)
-  { 
-    TimingDelay--;
-  }
+  while(uwTimingDelay != 0);
 }
 
 #ifdef  USE_FULL_ASSERT

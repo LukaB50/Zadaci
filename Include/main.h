@@ -1,6 +1,6 @@
 /**
   ******************************************************************************
-  * @file    SysTick_Example/main.h 
+  * @file    IWDG_Example/main.h 
   * @author  MCD Application Team
   * @version V1.0.1
   * @date    11-November-2013
@@ -32,11 +32,11 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx.h"
 #include <stdio.h>
-#include "stm32f4xx_dac.h"
+#include "stm32f4xx_tim.h"
 #include "stm32f429i_discovery.h"
 /* Private define ------------------------------------------------------------*/
 /* Exported functions ------------------------------------------------------- */
-void TimingDelay_Decrement(void);
+void Delay(__IO uint32_t nTime);
 
 #endif /* __MAIN_H */
 

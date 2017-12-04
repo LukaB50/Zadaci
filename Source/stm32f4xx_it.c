@@ -1,6 +1,6 @@
 /**
   ******************************************************************************
-  * @file    SysTick_Example/stm32f4xx_it.c 
+  * @file    IWDG_Example/stm32f4xx_it.c 
   * @author  MCD Application Team
   * @version V1.0.1
   * @date    11-November-2013
@@ -29,13 +29,12 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_it.h"
-#include "main.h"
 
 /** @addtogroup STM32F429I_DISCOVERY_Examples
   * @{
   */
 
-/** @addtogroup SysTick_Example
+/** @addtogroup EXTI_Example
   * @{
   */
 
@@ -43,6 +42,10 @@
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
+extern __IO uint32_t uwTimingDelay;
+extern __IO uint32_t uwPeriodValue;
+extern __IO uint32_t uwCaptureNumber;
+uint16_t tmpCC4[2] = {0, 0};
 
 /* Private function prototypes -----------------------------------------------*/
 /* Private functions ---------------------------------------------------------*/
@@ -146,7 +149,7 @@ void PendSV_Handler(void)
   */
 void SysTick_Handler(void)
 {
-  TimingDelay_Decrement();
+  uwTimingDelay--;
 }
 
 /******************************************************************************/
@@ -156,14 +159,47 @@ void SysTick_Handler(void)
 /*  file (startup_stm32f429_439xx.s).  */
 /******************************************************************************/
 /**
-  * @brief  This function handles PPP interrupt request.
+  * @brief  This function handles External line 0 interrupt request.
   * @param  None
   * @retval None
   */
-/*void PPP_IRQHandler(void)
-{
-}*/
+void EXTI0_IRQHandler(void)
+{ 
+  if(EXTI_GetITStatus(USER_BUTTON_EXTI_LINE) != RESET)
+  {
+    /* Clear the Button User EXTI Line Pending Bit */
+    EXTI_ClearITPendingBit(USER_BUTTON_EXTI_LINE);
+    
+    /* As the following address is invalid (not mapped), a Hardfault exception
+	  will be generated with an infinite loop and when the IWDG counter reaches 0
+    the IWDG reset occurs */
+ 	  *(__IO uint32_t *) 0xA0001000 = 0xFF;
+  } 
+}
 
+
+/**
+  * @brief  This function handles TIM5 global interrupt request.
+  * @param  None
+  * @retval None
+  */
+void TIM5_IRQHandler(void)
+{
+  if (TIM_GetITStatus(TIM5, TIM_IT_CC4) != RESET)
+  {    
+    /* Get the Input Capture value */
+    tmpCC4[uwCaptureNumber++] = TIM_GetCapture4(TIM5);
+   
+    /* Clear CC4 Interrupt pending bit */
+    TIM_ClearITPendingBit(TIM5, TIM_IT_CC4);
+
+    if (uwCaptureNumber >= 2)
+    {
+      /* Compute the period length */
+      uwPeriodValue = (uint16_t)(0xFFFF - tmpCC4[0] + tmpCC4[1] + 1);
+    }
+  }
+}
 /**
   * @}
   */ 
