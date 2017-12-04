@@ -1,94 +1,194 @@
 /**
-
   ******************************************************************************
-  * @file    SysTick_Example/main.c
+  * @file    EXTI_Example/main.c
   * @author  MCD Application Team
   * @version V1.0.1
   * @date    11-November-2013
-  * @brief   This example shows how to configure the SysTick to generate a time 
-  *          base equal to 1 ms. the SysTick is clocked by the AHB clock(HCLK).
+  * @brief   This example shows how to configure external interrupt lines.
   ******************************************************************************
-	*/
-	
-	
+  * @attention
+  *
+  * <h2><center>&copy; COPYRIGHT 2013 STMicroelectronics</center></h2>
+  *
+  * Licensed under MCD-ST Liberty SW License Agreement V2, (the "License");
+  * You may not use this file except in compliance with the License.
+  * You may obtain a copy of the License at:
+  *
+  *        http://www.st.com/software_license_agreement_liberty_v2
+  *
+  * Unless required by applicable law or agreed to in writing, software 
+  * distributed under the License is distributed on an "AS IS" BASIS, 
+  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  * See the License for the specific language governing permissions and
+  * limitations under the License.
+  *
+  ******************************************************************************
+  */
+/* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
-GPIO_InitTypeDef GPIO_InitStructure;
-static __IO uint32_t TimingDelay;
+/** @addtogroup STM32F429I_DISCOVERY_Examples
+  * @{
+  */
 
-static void Delay(__IO uint32_t nTime);   
+/** @addtogroup EXTI_Example
+  * @{
+  */
 
+/* Private typedef -----------------------------------------------------------*/
+EXTI_InitTypeDef   EXTI_InitStructure;
+/* Private define ------------------------------------------------------------*/ 
+/* Private macro -------------------------------------------------------------*/
+__IO uint32_t TimingDelay;
+/* Private variables ---------------------------------------------------------*/
+/* Private function prototypes -----------------------------------------------*/
+static void EXTILine0_Config(void);
+static void EXTILine13_Config(void);
+/* Private functions ---------------------------------------------------------*/
 
-
+/**
+  * @brief  Main program
+  * @param  None
+  * @retval None
+  */
 int main(void)
 {
-
-  /* Initialize LEDs available on STM32F429I-DISCO */
+  /*!< At this stage the microcontroller clock setting is already configured, 
+  this is done through SystemInit() function which is called from startup
+  files (startup_stm32f429_439xx.s) before to branch to application main. 
+  To reconfigure the default setting of SystemInit() function, refer to
+  system_stm32f4xx.c file
+  */ 
+  
+  RCC_ClocksTypeDef RCC_Clocks;
+  /* SysTick end of count event each 1ms */
+  RCC_GetClocksFreq(&RCC_Clocks);
+  SysTick_Config(RCC_Clocks.HCLK_Frequency / 1000);
+  
+  /* Initialize LEDs mounted on EVAL board */
   STM_EVAL_LEDInit(LED3);
   STM_EVAL_LEDInit(LED4);
-
-  /* Turn on LED3 */
-  STM_EVAL_LEDOff(LED3);
-
-  /* Setup SysTick Timer for 1 msec interrupts.
-     ------------------------------------------
-    1. The SysTick_Config() function is a CMSIS function which configure:
-       - The SysTick Reload register with value passed as function parameter.
-       - Configure the SysTick IRQ priority to the lowest value (0x0F).
-       - Reset the SysTick Counter register.
-       - Configure the SysTick Counter clock source to be Core Clock Source (HCLK).
-       - Enable the SysTick Interrupt.
-       - Start the SysTick Counter.
+  
+  /* Put LED3 on */
+  STM_EVAL_LEDOn(LED3);
+  
+  /* Configure EXTI Line0 (connected to PA0 pin) in interrupt mode */
+  EXTILine0_Config();
+  
+  /* Configure EXTI Line13 (connected to PC13 pin) in interrupt mode */
+  EXTILine13_Config();
+  
+  while (1)
+  {
+    /* Generate software interrupt: simulate a falling edge applied on EXTI0 line */
+    EXTI_GenerateSWInterrupt(EXTI_Line13);
     
-    2. You can change the SysTick Clock source to be HCLK_Div8 by calling the
-       SysTick_CLKSourceConfig(SysTick_CLKSource_HCLK_Div8) just after the
-       SysTick_Config() function call. The SysTick_CLKSourceConfig() is defined
-       inside the misc.c file.
-
-    3. You can change the SysTick IRQ priority by calling the
-       NVIC_SetPriority(SysTick_IRQn,...) just after the SysTick_Config() function 
-       call. The NVIC_SetPriority() is defined inside the core_cm3.h file.
-
-    4. To adjust the SysTick time base, use the following formula:
-                            
-         Reload Value = SysTick Counter Clock (Hz) x  Desired Time base (s)
-    
-       - Reload Value is the parameter to be passed for SysTick_Config() function
-       - Reload Value should not exceed 0xFFFFFF
-   */
-  if (SysTick_Config(SystemCoreClock / 1000))
-  { 
-    /* Capture error */ 
-    while (1);
+    Delay(500);
   }
-
-//		while (1)
- // {
-    /* Toggle LED4 */
-   // STM_EVAL_LEDToggle(LED4);
-
-    /* Insert X ms delay */
-   // Delay(3000);
-
-    /* Toggle LED3 */
-  //  STM_EVAL_LEDToggle(LED3);
-
-    /* Insert X ms delay */
-//    Delay(0);
-//  }  
 }
 
+/**
+  * @brief  Configures EXTI Line0 (connected to PA0 pin) in interrupt mode
+  * @param  None
+  * @retval None
+  */
+static void EXTILine0_Config(void)
+{
+  EXTI_InitTypeDef   EXTI_InitStructure;
+  GPIO_InitTypeDef   GPIO_InitStructure;
+  NVIC_InitTypeDef   NVIC_InitStructure;
+
+  /* Enable GPIOA clock */
+  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
+  /* Enable SYSCFG clock */
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
+  
+  /* Configure PA0 pin as input floating */
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0;
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+
+  /* Connect EXTI Line0 to PA0 pin */
+  SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOA, EXTI_PinSource0);
+
+  /* Configure EXTI Line0 */
+  EXTI_InitStructure.EXTI_Line = EXTI_Line0;
+  EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
+  EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;  
+  EXTI_InitStructure.EXTI_LineCmd = ENABLE;
+  EXTI_Init(&EXTI_InitStructure);
+
+  /* Enable and set EXTI Line0 Interrupt to the lowest priority */
+  NVIC_InitStructure.NVIC_IRQChannel = EXTI0_IRQn;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0x0F;
+  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0x0F;
+  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_Init(&NVIC_InitStructure);
+}
+
+/**
+  * @brief  Configures EXTI Line15 (connected to PG15 pin) in interrupt mode
+  * @param  None
+  * @retval None
+  */
+static void EXTILine13_Config(void)
+{
+  EXTI_InitTypeDef   EXTI_InitStructure;
+  GPIO_InitTypeDef   GPIO_InitStructure;
+  NVIC_InitTypeDef   NVIC_InitStructure;
+
+  /* Enable GPIOC clock */
+  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
+  
+  /* Enable SYSCFG clock */
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
+  
+  /* Configure PC13 pin as input floating */
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13;
+  GPIO_Init(GPIOC, &GPIO_InitStructure);
+
+  /* Connect EXTI Line15 to PC13 pin */
+  SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOC, EXTI_PinSource13);
+
+  /* Configure EXTI Line13 */
+  EXTI_InitStructure.EXTI_Line = EXTI_Line13;
+  EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
+  EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;
+  EXTI_InitStructure.EXTI_LineCmd = ENABLE;
+  EXTI_Init(&EXTI_InitStructure);
+
+  /* Enable and set EXTI15_10 Interrupt to the lowest priority */
+  NVIC_InitStructure.NVIC_IRQChannel = EXTI15_10_IRQn;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0x0F;
+  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0x0F;
+  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+
+  NVIC_Init(&NVIC_InitStructure);
+}
+
+/**
+  * @brief  Inserts a delay time.
+  * @param  nTime: specifies the delay time length, in 10 ms.
+  * @retval None
+  */
 void Delay(__IO uint32_t nTime)
-{ 
+{
   TimingDelay = nTime;
 
   while(TimingDelay != 0);
 }
 
-
+/**
+  * @brief  Decrements the TimingDelay variable.
+  * @param  None
+  * @retval None
+  */
 void TimingDelay_Decrement(void)
 {
-  if (TimingDelay != 0)
+  if (TimingDelay != 0x00)
   { 
     TimingDelay--;
   }
@@ -114,3 +214,13 @@ void assert_failed(uint8_t* file, uint32_t line)
   }
 }
 #endif
+
+/**
+  * @}
+  */ 
+
+/**
+  * @}
+  */ 
+
+/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

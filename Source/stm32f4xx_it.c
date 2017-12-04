@@ -1,6 +1,6 @@
 /**
   ******************************************************************************
-  * @file    SysTick_Example/stm32f4xx_it.c 
+  * @file    EXTI_Example/stm32f4xx_it.c 
   * @author  MCD Application Team
   * @version V1.0.1
   * @date    11-November-2013
@@ -29,13 +29,12 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_it.h"
-#include "main.h"
 
 /** @addtogroup STM32F429I_DISCOVERY_Examples
   * @{
   */
 
-/** @addtogroup SysTick_Example
+/** @addtogroup EXTI_Example
   * @{
   */
 
@@ -144,19 +143,9 @@ void PendSV_Handler(void)
   * @param  None
   * @retval None
   */
-
-volatile int cnt=0;
 void SysTick_Handler(void)
 {
-	if(cnt > 3000)
-	{
-		STM_EVAL_LEDToggle(LED4);
-		cnt=0;
-	}
-	else
-		cnt++;
-	
-	//TimingDelay_Decrement();
+  TimingDelay_Decrement();
 }
 
 /******************************************************************************/
@@ -174,6 +163,39 @@ void SysTick_Handler(void)
 {
 }*/
 
+/**
+  * @brief  This function handles External line 0 interrupt request.
+  * @param  None
+  * @retval None
+  */
+void EXTI0_IRQHandler(void)
+{
+  if(EXTI_GetITStatus(EXTI_Line0) != RESET)
+  {
+    /* Toggle LED3 */
+    STM_EVAL_LEDToggle(LED3);
+    
+    /* Clear the EXTI line 0 pending bit */
+    EXTI_ClearITPendingBit(EXTI_Line0);
+  }
+}
+
+/**
+  * @brief  This function handles External lines 15 to 10 interrupt request.
+  * @param  None
+  * @retval None
+  */
+void EXTI15_10_IRQHandler(void)
+{
+  if(EXTI_GetITStatus(EXTI_Line13) != RESET)
+  {
+    /* Toggle LED4 */
+    STM_EVAL_LEDToggle(LED4);
+    
+    /* Clear the EXTI line 13 pending bit */
+    EXTI_ClearITPendingBit(EXTI_Line13);
+  }
+}
 /**
   * @}
   */ 
