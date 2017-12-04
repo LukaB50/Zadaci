@@ -144,9 +144,19 @@ void PendSV_Handler(void)
   * @param  None
   * @retval None
   */
+
+volatile int cnt=0;
 void SysTick_Handler(void)
 {
-  TimingDelay_Decrement();
+	if(cnt > 3000)
+	{
+		STM_EVAL_LEDToggle(LED4);
+		cnt=0;
+	}
+	else
+		cnt++;
+	
+	//TimingDelay_Decrement();
 }
 
 /******************************************************************************/

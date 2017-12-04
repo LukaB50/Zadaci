@@ -18,7 +18,7 @@
           <Vendor>STMicroelectronics</Vendor>
           <Cpu>IRAM(0x20000000-0x2002FFFF) IRAM2(0x10000000-0x1000FFFF) IROM(0x8000000-0x81FFFFF) CLOCK(25000000) CPUTYPE("Cortex-M4") FPU2</Cpu>
           <FlashUtilSpec></FlashUtilSpec>
-          <StartupFile>"Startup\ST\STM32F4xx\startup_stm32f429x.s" ("STM32F429 Startup Code")</StartupFile>
+          <StartupFile>"Startup\ST\STM32F4xx\startup_stm32f429_439xx.s" ("STM32F429/439xx Startup Code")</StartupFile>
           <FlashDriverDll>UL2CM3(-O207 -S0 -C0 -FO7 -FD20000000 -FC800 -FN1 -FF0STM32F4xx_2048 -FS08000000 -FL0200000)</FlashDriverDll>
           <DeviceId>7034</DeviceId>
           <RegisterFile>stm32f4xx.h</RegisterFile>
@@ -28,10 +28,10 @@
           <Linker></Linker>
           <OHString></OHString>
           <InfinionOptionDll></InfinionOptionDll>
-          <SLE66CMisc>-DSTM32F429X</SLE66CMisc>
+          <SLE66CMisc>-DSTM32F429_439xx</SLE66CMisc>
           <SLE66AMisc></SLE66AMisc>
           <SLE66LinkerMisc></SLE66LinkerMisc>
-          <SFDFile>SFD\ST\STM32F4xx\STM32F439x.SFR</SFDFile>
+          <SFDFile>SFD\ST\STM32F4xx\STM32F429x.SFR</SFDFile>
           <bCustSvd>0</bCustSvd>
           <UseEnv>0</UseEnv>
           <BinPath></BinPath>

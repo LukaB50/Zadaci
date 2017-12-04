@@ -8,67 +8,27 @@
   * @brief   This example shows how to configure the SysTick to generate a time 
   *          base equal to 1 ms. the SysTick is clocked by the AHB clock(HCLK).
   ******************************************************************************
-  * @attention
-  *
-  * <h2><center>&copy; COPYRIGHT 2013 STMicroelectronics</center></h2>
-  *
-  * Licensed under MCD-ST Liberty SW License Agreement V2, (the "License");
-  * You may not use this file except in compliance with the License.
-  * You may obtain a copy of the License at:
-  *
-  *        http://www.st.com/software_license_agreement_liberty_v2
-  *
-  * Unless required by applicable law or agreed to in writing, software 
-  * distributed under the License is distributed on an "AS IS" BASIS, 
-  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  * See the License for the specific language governing permissions and
-  * limitations under the License.
-  *
-  ******************************************************************************
-  */
-/* Includes ------------------------------------------------------------------*/
+	*/
+	
+	
 #include "main.h"
 
-/** @addtogroup STM32F429I_DISCOVERY_Examples
-  * @{
-  */
-
-/** @addtogroup SysTick_Example
-  * @{
-  */ 
-
-/* Private typedef -----------------------------------------------------------*/
-/* Private define ------------------------------------------------------------*/
-/* Private macro -------------------------------------------------------------*/
-/* Private variables ---------------------------------------------------------*/
 GPIO_InitTypeDef GPIO_InitStructure;
 static __IO uint32_t TimingDelay;
 
-/* Private function prototypes -----------------------------------------------*/
 static void Delay(__IO uint32_t nTime);   
 
-/* Private functions ---------------------------------------------------------*/
 
-/**
-  * @brief   Main program
-  * @param  None
-  * @retval None
-  */
+
 int main(void)
 {
-  /*!< At this stage the microcontroller clock setting is already configured, 
-       this is done through SystemInit() function which is called from startup
-       files (startup_stm32f429_439xx.s) before to branch to application main. 
-       To reconfigure the default setting of SystemInit() function, refer to
-       system_stm32f4xx.c file
-     */       
-       
+
   /* Initialize LEDs available on STM32F429I-DISCO */
   STM_EVAL_LEDInit(LED3);
   STM_EVAL_LEDInit(LED4);
 
   /* Turn on LED3 */
-  STM_EVAL_LEDOn(LED3);
+  STM_EVAL_LEDOff(LED3);
 
   /* Setup SysTick Timer for 1 msec interrupts.
      ------------------------------------------
@@ -102,27 +62,22 @@ int main(void)
     while (1);
   }
 
-  while (1)
-  {
+//		while (1)
+ // {
     /* Toggle LED4 */
-    STM_EVAL_LEDToggle(LED4);
+   // STM_EVAL_LEDToggle(LED4);
 
-    /* Insert 50 ms delay */
-    Delay(50);
+    /* Insert X ms delay */
+   // Delay(3000);
 
     /* Toggle LED3 */
-    STM_EVAL_LEDToggle(LED3);
+  //  STM_EVAL_LEDToggle(LED3);
 
-    /* Insert 100 ms delay */
-    Delay(100);
-  }
+    /* Insert X ms delay */
+//    Delay(0);
+//  }  
 }
 
-/**
-  * @brief  Inserts a delay time.
-  * @param  nTime: specifies the delay time length, in milliseconds.
-  * @retval None
-  */
 void Delay(__IO uint32_t nTime)
 { 
   TimingDelay = nTime;
@@ -130,11 +85,7 @@ void Delay(__IO uint32_t nTime)
   while(TimingDelay != 0);
 }
 
-/**
-  * @brief  Decrements the TimingDelay variable.
-  * @param  None
-  * @retval None
-  */
+
 void TimingDelay_Decrement(void)
 {
   if (TimingDelay != 0)
@@ -163,13 +114,3 @@ void assert_failed(uint8_t* file, uint32_t line)
   }
 }
 #endif
-
-/**
-  * @}
-  */ 
-
-/**
-  * @}
-  */ 
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
